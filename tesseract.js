@@ -53,54 +53,52 @@ var edges = [
   {start:14, end:15}
 ];
 
-var rotationAngles = { zw: 0.01, yw: 0.0, xw: 0.01, xz: 0.0, xy: 0.0, yz: 0.01 };
+var rotationAngles = { zw: 0, yw: 0, xw: 0, xz: 0, xy: 0, yz: 0 };
+var rotationSpeeds = {
+  zw: 0.01,
+  yw: 0.01,
+  xw: 0.0,
+  xz: 0.01,
+  xy: 0.0,
+  yz: 0.0
+};
 
 
 var rotate = function(p,r) {
   var rCos = {}, rSin = {};
-  var temp = {};
+  var result = {};
   for (var axis in rotationAngles) {
     rCos[axis] = Math.cos(r[axis]);
     rSin[axis] = Math.sin(r[axis]);
   }
 
   //ZW rotation
-  temp.x = ( rCos.zw*p.x) + (-rSin.zw*p.y);
-  temp.y = ( rSin.zw*p.x) + ( rCos.zw*p.y);
-  p.x = temp.x;
-  p.y = temp.y;
+  result.x = rCos.zw*p.x - rSin.zw*p.y;
+  result.y = rSin.zw*p.x + rCos.zw*p.y;
+  result.z = p.z;
+  result.w = p.w;
 
   //YW rotation
-  temp.x = ( rCos.yw*p.x) + ( rSin.yw*p.z);
-  temp.z = (-rSin.yw*p.x) + ( rCos.yw*p.z);
-  p.x = temp.x;
-  p.z = temp.z;
+  result.x =  rCos.yw*result.x + rSin.yw*result.z;
+  result.z = -rSin.yw*result.x + rCos.yw*result.z;
 
   //XW rotation
-  temp.y = ( rCos.xw*p.y) + (-rSin.xw*p.z);
-  temp.z = ( rSin.xw*p.y) + ( rCos.xw*p.z);
-  p.y = temp.y;
-  p.z = temp.z;
+  result.y = rCos.xw*result.y - rSin.xw*result.z;
+  result.z = rSin.xw*result.y + rCos.xw*result.z;
 
   //XZ rotation
-  temp.y = ( rCos.xz*p.y) + ( rSin.xz*p.w);
-  temp.w = (-rSin.xz*p.y) + ( rCos.xz*p.w);
-  p.y = temp.y;
-  p.w = temp.w;
+  result.y =  rCos.xz*result.y + rSin.xz*result.w;
+  result.w = -rSin.xz*result.y + rCos.xz*result.w;
 
   //XY rotation
-  temp.z = ( rCos.xy*p.z) + (-rSin.xy*p.w);
-  temp.w = ( rSin.xy*p.z) + ( rCos.xy*p.w);
-  p.z = temp.z;
-  p.w = temp.w;
+  result.z = rCos.xy*result.z - rSin.xy*result.w;
+  result.w = rSin.xy*result.z + rCos.xy*result.w;
 
   //YZ rotation
-  temp.x = ( rCos.yz*p.x) + (-rSin.yz*p.w);
-  temp.w = ( rSin.yz*p.x) + ( rCos.yz*p.w);
-  p.x = temp.x;
-  p.w = temp.w;
+  result.x = rCos.yz*result.x - rSin.yz*result.w;
+  result.w = rSin.yz*result.x + rCos.yz*result.w;
 
-  return p;
+  return result;
 };
 
 var canvas = document.getElementById('canvas');
@@ -112,14 +110,28 @@ var draw = function() {
     return rotate(vertex, rotationAngles);
   });
 
-  var perspective = {
-    z: 0.3,
-    w: 0.25
-  };
-  var screenPositions = rotatedVertices.map(function(vertex) {
+  var perspective = 0.2;
+
+  //project into three dimensions...
+  var finalPositions = rotatedVertices.map(function(vertex) {
     return {
-      x: vertex.x * (1-vertex.w*perspective.w) * (1-vertex.z*perspective.z) * 80 + canvas.width/2,
-      y: vertex.y * (1-vertex.w*perspective.w) * (1-vertex.z*perspective.z) * 80 + canvas.height/2,
+      x: vertex.x,
+      y: vertex.y,
+      z: vertex.z
+      // x: vertex.x * (1-vertex.w*perspective),
+      // y: vertex.y * (1-vertex.w*perspective),
+      // z: vertex.z * (1-vertex.w*perspective)
+    }
+
+  })
+
+  //...and then project down into two.
+  var screenPositions = finalPositions.map(function(vertex) {
+    return {
+      x: vertex.x * 80 + canvas.width/2,
+      y: vertex.y * 80 + canvas.height/2,
+      // x: vertex.x * (1-vertex.z*perspective) * 80 + canvas.width/2,
+      // y: vertex.y * (1-vertex.z*perspective) * 80 + canvas.height/2,
     };
   });
 
@@ -132,6 +144,11 @@ var draw = function() {
     context.lineTo(end.x, end.y);
     context.stroke();
   });
+
+  for (var axis in rotationAngles) {
+    if (rotationSpeeds[axis])
+      rotationAngles[axis] += rotationSpeeds[axis];
+  }
 
   requestAnimationFrame(draw);
 }
