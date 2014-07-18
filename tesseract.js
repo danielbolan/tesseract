@@ -150,6 +150,17 @@ var draw = function() {
       rotationAngles[axis] += rotationSpeeds[axis];
   }
 
+  if (running) requestAnimationFrame(draw);
+}
+
+var running;
+var pause = function() {
+  running = false;
+}
+var start = function() {
+  if (running) return;
+  running = true;
   requestAnimationFrame(draw);
 }
-requestAnimationFrame(draw);
+
+start();
